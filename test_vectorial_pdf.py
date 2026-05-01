@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import argparse
+import csv
 import json
 import re
 import sys
+from io import BytesIO
 from pathlib import Path
 
 try:
@@ -71,6 +73,25 @@ FILENAME_RE = re.compile(
     r"(?P<pack_width_mm>\d+)x(?P<pack_height_mm>\d+)x(?P<pack_depth_mm>\d+)_"
     r"(?P<product_name>.+)$"
 )
+LOT_RE = re.compile(r"\bLOT[:\s-]*([A-Z0-9-]+)\b", re.IGNORECASE)
+IP_RE = re.compile(r"\b[I1]PX?\d+\b", re.IGNORECASE)
+BATTERY_RE = re.compile(
+    r"Capacit[aà]\s+batteria[:\s]*([0-9]+(?:[.,][0-9]+)?)\s*mAh",
+    re.IGNORECASE,
+)
+VOLTAGE_RE = re.compile(
+    r"Tensione\s+nominale\s+batteria[:\s]*([0-9]+(?:[.,][0-9]+)?)\s*V",
+    re.IGNORECASE,
+)
+DIMENSIONS_RE = re.compile(
+    r"(\d+(?:[.,]\d+)?)\s*c(?:m|em)?\s*[xX]\s*[@ØO09]?\s*(\d+(?:[.,]\d+)?)\s*c(?:m|em)?",
+    re.IGNORECASE,
+)
+VIBRATIONS_RE = re.compile(r"(\d+)\s*vibrazioni|\b(\d+)\s*vibrations\b", re.IGNORECASE)
+MATERIAL_RE = re.compile(
+    r"\b(Sili\w*(?:[\s,\/-]+ABS)?|ABS(?:[\s,\/-]+Sili\w*)?)\b",
+    re.IGNORECASE,
+)
 
 
 def value_entry(value: object, source: str, confidence: str = "high") -> dict[str, object]:
@@ -128,6 +149,25 @@ def analyze_pdf(pdf_path: Path) -> dict[str, object]:
         }
 
 
+def load_ocr_dependencies() -> tuple[object | None, object | None, str | None]:
+    try:
+        from PIL import Image
+    except ModuleNotFoundError:
+        return None, None, "Manca Pillow. Installa con: .venv/bin/python -m pip install pillow"
+
+    try:
+        import pytesseract
+    except ModuleNotFoundError:
+        return None, None, "Manca pytesseract. Installa con: .venv/bin/python -m pip install pytesseract"
+
+    try:
+        pytesseract.get_tesseract_version()
+    except Exception:
+        return None, None, "Manca il binario tesseract. Installa con: brew install tesseract"
+
+    return Image, pytesseract, None
+
+
 def extract_words(pdf_path: Path) -> list[dict[str, object]]:
     words: list[dict[str, object]] = []
 
@@ -157,6 +197,61 @@ def extract_words(pdf_path: Path) -> list[dict[str, object]]:
                 )
 
     return words
+
+
+def dump_page_images(pdf_path: Path, output_dir: Path, dpi: int = 200) -> list[str]:
+    written_files: list[str] = []
+    matrix = fitz.Matrix(dpi / 72, dpi / 72)
+    pdf_output_dir = output_dir / pdf_path.stem
+    pdf_output_dir.mkdir(parents=True, exist_ok=True)
+
+    with fitz.open(pdf_path) as doc:
+        for page_number, page in enumerate(doc, start=1):
+            pix = page.get_pixmap(matrix=matrix, alpha=False)
+            output_path = pdf_output_dir / f"page_{page_number:02d}.png"
+            pix.save(output_path)
+            written_files.append(str(output_path))
+
+    return written_files
+
+
+def extract_ocr_data(pdf_path: Path, dpi: int = 200) -> dict[str, object]:
+    image_cls, pytesseract, error = load_ocr_dependencies()
+    if error:
+        return {
+            "enabled": False,
+            "error": error,
+            "pages": [],
+            "text": "",
+        }
+
+    matrix = fitz.Matrix(dpi / 72, dpi / 72)
+    pages: list[dict[str, object]] = []
+
+    with fitz.open(pdf_path) as doc:
+        for page_number, page in enumerate(doc, start=1):
+            pix = page.get_pixmap(matrix=matrix, alpha=False)
+            image = image_cls.open(BytesIO(pix.tobytes("png")))
+            text = pytesseract.image_to_string(image, lang="eng").strip()
+            pages.append(
+                {
+                    "page": page_number,
+                    "text": text,
+                }
+            )
+
+    full_text = "\n\n".join(
+        f"--- Pagina {page['page']} ---\n{page['text']}"
+        for page in pages
+        if page["text"]
+    ).strip()
+
+    return {
+        "enabled": True,
+        "error": None,
+        "pages": pages,
+        "text": full_text,
+    }
 
 
 def parse_filename(pdf_path: Path) -> dict[str, dict[str, object]]:
@@ -260,6 +355,135 @@ def parse_disposal_codes(words: list[dict[str, object]]) -> dict[str, dict[str, 
     return result
 
 
+def parse_ocr_candidates(ocr_data: dict[str, object]) -> dict[str, dict[str, object]]:
+    if not ocr_data.get("enabled"):
+        return {}
+
+    text = str(ocr_data.get("text", ""))
+    normalized_text = text.replace("\n", " ")
+    result: dict[str, dict[str, object]] = {}
+
+    lot_match = LOT_RE.search(text)
+    if lot_match:
+        lot_value = lot_match.group(1).strip()
+        result["numero_serie_lotto"] = excel_field_entry(
+            "numero_serie_lotto",
+            f"LOT: {lot_value}",
+            "ocr",
+            "medium",
+        )
+        result["lotto"] = excel_field_entry(
+            "lotto",
+            lot_value,
+            "ocr",
+            "medium",
+        )
+
+    battery_match = BATTERY_RE.search(text)
+    voltage_match = VOLTAGE_RE.search(text)
+    if battery_match:
+        battery_value = battery_match.group(1).replace(",", ".")
+        battery_text = f"{battery_value}mAh"
+        if voltage_match:
+            voltage_value = voltage_match.group(1).replace(",", ".")
+            battery_text = f"{battery_text} / {voltage_value}V"
+        result["capacita_batteria_tensione"] = excel_field_entry(
+            "capacita_batteria_tensione",
+            battery_text,
+            "ocr",
+            "medium",
+        )
+
+    ip_match = IP_RE.search(text)
+    if ip_match:
+        result["impermeabilita"] = excel_field_entry(
+            "impermeabilita",
+            ip_match.group(0).upper().replace("1P", "IP"),
+            "ocr",
+            "medium",
+        )
+
+    dimensions_match = DIMENSIONS_RE.search(normalized_text)
+    if dimensions_match:
+        first = dimensions_match.group(1).replace(",", ".")
+        second = dimensions_match.group(2).replace(",", ".")
+        second_value = float(second)
+        first_value = float(first)
+        if second_value > first_value and second.startswith("9") and len(second) > 2:
+            second = second[1:]
+        result["dimensioni"] = excel_field_entry(
+            "dimensioni",
+            f"{first}cm x Ø{second}cm",
+            "ocr",
+            "medium",
+        )
+
+    material_match = MATERIAL_RE.search(normalized_text)
+    if material_match:
+        material_value = material_match.group(1)
+        material_value = re.sub(r"sili\w*", "Silicone", material_value, flags=re.IGNORECASE)
+        material_value = re.sub(r"\s+", "", material_value)
+        material_value = material_value.replace(",", "/").replace("-", "/")
+        result["materiale"] = excel_field_entry(
+            "materiale",
+            material_value,
+            "ocr",
+            "medium",
+        )
+
+    if re.search(r"Ricarica magnetica|Magnetic charge", text, re.IGNORECASE):
+        result["modalita_ricarica"] = excel_field_entry(
+            "modalita_ricarica",
+            "Ricarica magnetica",
+            "ocr",
+            "medium",
+        )
+
+    vibrations_match = VIBRATIONS_RE.search(text)
+    if vibrations_match:
+        vibrations_value = vibrations_match.group(1) or vibrations_match.group(2)
+        result["numero_vibrazioni"] = excel_field_entry(
+            "numero_vibrazioni",
+            vibrations_value,
+            "ocr",
+            "medium",
+        )
+
+    if re.search(r"Scansiona il QR code|QR code", text, re.IGNORECASE):
+        result["qr_code_junker"] = excel_field_entry(
+            "qr_code_junker",
+            "✅",
+            "ocr",
+            "low",
+        )
+
+    if re.search(r"Garanzia 2 anni|2 ?years warranty", text, re.IGNORECASE):
+        result["simbolo_garanzia_2_anni"] = excel_field_entry(
+            "simbolo_garanzia_2_anni",
+            "✅",
+            "ocr",
+            "low",
+        )
+
+    if re.search(r"\bCE\b", text):
+        result["simbolo_ce"] = excel_field_entry(
+            "simbolo_ce",
+            "✅",
+            "ocr",
+            "low",
+        )
+
+    if re.search(r"\bStrap-?on\b", text, re.IGNORECASE):
+        result["strap_on_compatibile"] = excel_field_entry(
+            "strap_on_compatibile",
+            "✅",
+            "ocr",
+            "low",
+        )
+
+    return result
+
+
 def parse_filename_candidates(
     filename_fields: dict[str, dict[str, object]],
 ) -> dict[str, dict[str, object]]:
@@ -300,18 +524,44 @@ def count_missing_fields(fields: dict[str, dict[str, object]]) -> int:
     )
 
 
-def build_structured_record(pdf_path: Path) -> dict[str, object]:
+def write_sheet_csv(records: list[dict[str, object]], output_path: Path) -> None:
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    with output_path.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(
+            handle,
+            fieldnames=[label for _, _, label in EXCEL_FIELDS],
+        )
+        writer.writeheader()
+        for record in records:
+            writer.writerow(record["sheet_row"])
+
+
+def build_structured_record(
+    pdf_path: Path,
+    *,
+    ocr_enabled: bool = False,
+    ocr_dpi: int = 200,
+    dump_images_dir: Path | None = None,
+) -> dict[str, object]:
     analysis = analyze_pdf(pdf_path)
     words = extract_words(pdf_path)
     filename_fields = parse_filename(pdf_path)
+    ocr_data = extract_ocr_data(pdf_path, dpi=ocr_dpi) if ocr_enabled else None
+    image_files = (
+        dump_page_images(pdf_path, dump_images_dir, dpi=ocr_dpi)
+        if dump_images_dir is not None
+        else []
+    )
 
     fields: dict[str, dict[str, object]] = {}
     fields.update(parse_static_fields())
     fields.update(parse_filename_candidates(filename_fields))
     fields.update(parse_disposal_codes(words))
+    if ocr_data is not None:
+        fields.update(parse_ocr_candidates(ocr_data))
     fields = mark_missing_fields(fields)
 
-    return {
+    record = {
         "file": pdf_path.name,
         "analysis": {
             "pages": analysis["pages"],
@@ -326,6 +576,14 @@ def build_structured_record(pdf_path: Path) -> dict[str, object]:
         "sheet_row": build_sheet_row(fields),
         "missing_fields_count": count_missing_fields(fields),
     }
+
+    if ocr_data is not None:
+        record["ocr"] = ocr_data
+
+    if image_files:
+        record["debug_images"] = image_files
+
+    return record
 
 
 def iter_pdfs(directory: Path) -> list[Path]:
@@ -351,6 +609,27 @@ def main() -> int:
         action="store_true",
         help="Stampa l'output strutturato JSON invece del report leggibile.",
     )
+    parser.add_argument(
+        "--export-csv",
+        type=Path,
+        help="Esporta le righe allineate allo schema Excel in un CSV.",
+    )
+    parser.add_argument(
+        "--dump-images",
+        type=Path,
+        help="Salva PNG delle pagine PDF per debug visuale.",
+    )
+    parser.add_argument(
+        "--ocr",
+        action="store_true",
+        help="Attiva OCR fallback con Tesseract sui PDF renderizzati.",
+    )
+    parser.add_argument(
+        "--ocr-dpi",
+        type=int,
+        default=200,
+        help="Risoluzione di rendering per OCR e dump immagini. Default: 200",
+    )
     args = parser.parse_args()
 
     pdf_dir = args.directory.resolve()
@@ -366,7 +645,12 @@ def main() -> int:
     records = []
 
     for pdf_path in pdfs:
-        record = build_structured_record(pdf_path)
+        record = build_structured_record(
+            pdf_path,
+            ocr_enabled=args.ocr,
+            ocr_dpi=args.ocr_dpi,
+            dump_images_dir=args.dump_images,
+        )
         records.append(record)
 
         if args.json:
@@ -406,6 +690,27 @@ def main() -> int:
                 f"- {field_name}: {field['value']} "
                 f"(source={field['source']}, confidence={field['confidence']})"
             )
+
+        if args.ocr:
+            ocr_data = record.get("ocr", {})
+            print("\nOCR:")
+            print(
+                f"- enabled: {ocr_data.get('enabled')}"
+            )
+            if ocr_data.get("error"):
+                print(f"- error: {ocr_data['error']}")
+            else:
+                ocr_text = str(ocr_data.get("text", ""))
+                preview = ocr_text[:300].replace("\n", " | ")
+                print(f"- preview: {preview or '[vuoto]'}")
+
+        if record.get("debug_images"):
+            print("\nDEBUG IMAGES:")
+            for image_file in record["debug_images"]:
+                print(f"- {image_file}")
+
+    if args.export_csv:
+        write_sheet_csv(records, args.export_csv.resolve())
 
     if args.json:
         print(json.dumps(records, indent=2, ensure_ascii=False))
