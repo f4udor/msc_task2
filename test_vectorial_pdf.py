@@ -105,6 +105,33 @@ MATERIAL_RE = re.compile(
     r"\b(Sili\w*(?:[\s,\/-]+ABS)?|ABS(?:[\s,\/-]+Sili\w*)?)\b",
     re.IGNORECASE,
 )
+EXTRA_MATERIAL_PATTERNS = [
+    (re.compile(r"\bTPE\b", re.IGNORECASE), "TPE"),
+    (re.compile(r"\bPVC\b", re.IGNORECASE), "PVC"),
+    (re.compile(r"\bmetal\b", re.IGNORECASE), "Metal"),
+    (re.compile(r"\bpizzo\b", re.IGNORECASE), "Pizzo"),
+    (re.compile(r"\bcotone\b", re.IGNORECASE), "Cotone"),
+]
+CE_BROAD_RE = re.compile(r"C€|\bCE\b|Ce RE|C[E€]\s+c", re.IGNORECASE)
+FALSE_DEFAULT_FIELDS = {
+    "simbolo_ce",
+    "simbolo_raee",
+    "simbolo_ukca",
+    "simbolo_triman",
+    "simbolo_smaltimento_spagnolo",
+    "qr_code_junker",
+    "simbolo_garanzia_2_anni",
+    "simbolo_libretto_informativo",
+    "numero_vibrazioni",
+    "numero_velocita",
+    "numero_modalita_suzione",
+    "numero_modalita_tapping",
+    "numero_modalita_rotazione",
+    "strap_on_compatibile",
+    "funzione_riscaldante",
+    "codice_smaltimento_doypack",
+    "sexy_ideas",
+}
 
 
 def value_entry(value: object, source: str, confidence: str = "high") -> dict[str, object]:
@@ -541,6 +568,87 @@ def parse_ocr_candidates(ocr_data: dict[str, object]) -> dict[str, dict[str, obj
     return result
 
 
+def parse_inferred_candidates(
+    fields: dict[str, dict[str, object]],
+    ocr_data: dict[str, object] | None,
+) -> dict[str, dict[str, object]]:
+    if ocr_data is None or not ocr_data.get("enabled"):
+        return {}
+
+    text = str(ocr_data.get("text", ""))
+    result: dict[str, dict[str, object]] = {}
+
+    if (
+        fields.get("contenuto_triman_corretto", {}).get("value")
+        and fields.get("simbolo_triman", {}).get("value") in (None, "")
+    ):
+        result["simbolo_triman"] = excel_field_entry(
+            "simbolo_triman",
+            "✅",
+            "inference",
+            "medium",
+        )
+
+    if re.search(r"SEXY IDEAS", text, re.IGNORECASE):
+        result["sexy_ideas"] = excel_field_entry(
+            "sexy_ideas",
+            "✅",
+            "ocr",
+            "medium",
+        )
+
+    if CE_BROAD_RE.search(text):
+        result["simbolo_ce"] = excel_field_entry(
+            "simbolo_ce",
+            "✅",
+            "inference",
+            "low",
+        )
+
+    if re.search(r"USB-C|USB C", text, re.IGNORECASE):
+        result["modalita_ricarica"] = excel_field_entry(
+            "modalita_ricarica",
+            "Ricarica USB-C",
+            "inference",
+            "medium",
+        )
+    elif re.search(r"minijack", text, re.IGNORECASE):
+        result["modalita_ricarica"] = excel_field_entry(
+            "modalita_ricarica",
+            "Ricarica minijack",
+            "inference",
+            "medium",
+        )
+    elif re.search(r"AAA Batteries|Batterie AAA", text, re.IGNORECASE):
+        result["modalita_ricarica"] = excel_field_entry(
+            "modalita_ricarica",
+            "2 Batterie AAA",
+            "inference",
+            "medium",
+        )
+
+    if re.search(r"Non impermeabile|Not waterproof", text, re.IGNORECASE):
+        result["impermeabilita"] = excel_field_entry(
+            "impermeabilita",
+            "❌",
+            "inference",
+            "medium",
+        )
+
+    if "materiale" not in result and fields.get("materiale", {}).get("value") in (None, ""):
+        for pattern, material_value in EXTRA_MATERIAL_PATTERNS:
+            if pattern.search(text):
+                result["materiale"] = excel_field_entry(
+                    "materiale",
+                    material_value,
+                    "inference",
+                    "medium",
+                )
+                break
+
+    return result
+
+
 def parse_filename_candidates(
     filename_fields: dict[str, dict[str, object]],
 ) -> dict[str, dict[str, object]]:
@@ -556,6 +664,19 @@ def parse_filename_candidates(
         )
 
     return result
+
+
+def apply_false_defaults(fields: dict[str, dict[str, object]]) -> dict[str, dict[str, object]]:
+    for field_name in FALSE_DEFAULT_FIELDS:
+        if fields.get(field_name, {}).get("value") in (None, ""):
+            fields[field_name] = excel_field_entry(
+                field_name,
+                "❌",
+                "default_false",
+                "low",
+            )
+
+    return fields
 
 
 def mark_missing_fields(fields: dict[str, dict[str, object]]) -> dict[str, dict[str, object]]:
@@ -599,6 +720,8 @@ def build_coverage_report(records: list[dict[str, object]]) -> dict[str, object]
             "filename": 0,
             "pdf_text": 0,
             "ocr": 0,
+            "inference": 0,
+            "default_false": 0,
             "missing": 0,
         }
         filled = 0
@@ -682,6 +805,8 @@ def print_coverage_report(report: dict[str, object]) -> None:
             f"filename={sources['filename']} "
             f"pdf={sources['pdf_text']} "
             f"ocr={sources['ocr']} "
+            f"inference={sources['inference']} "
+            f"default_false={sources['default_false']} "
             f"missing={sources['missing']}]"
         )
 
@@ -721,6 +846,8 @@ def build_structured_record(
     fields.update(parse_disposal_codes(words))
     if ocr_data is not None:
         fields.update(parse_ocr_candidates(ocr_data))
+        fields.update(parse_inferred_candidates(fields, ocr_data))
+    fields = apply_false_defaults(fields)
     fields = mark_missing_fields(fields)
 
     record = {
