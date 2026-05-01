@@ -88,6 +88,19 @@ DIMENSIONS_RE = re.compile(
     re.IGNORECASE,
 )
 VIBRATIONS_RE = re.compile(r"(\d+)\s*vibrazioni|\b(\d+)\s*vibrations\b", re.IGNORECASE)
+SPEED_RE = re.compile(r"(\d+)\s*(?:speed|speeds|velocit[aà]?)", re.IGNORECASE)
+SUCTION_RE = re.compile(
+    r"(\d+)\s*(?:modalit[aà]\s*(?:di)?\s*suz\w+|suction\s*mode|suction)",
+    re.IGNORECASE,
+)
+TAPPING_RE = re.compile(
+    r"(\d+)\s*(?:modalit[aà]\s*tapp\w*|tapping\s*mode|tapping)",
+    re.IGNORECASE,
+)
+ROTATION_RE = re.compile(
+    r"(\d+)\s*(?:modalit[aà]\s*rot\w*|rotation\s*mode|rotation)",
+    re.IGNORECASE,
+)
 MATERIAL_RE = re.compile(
     r"\b(Sili\w*(?:[\s,\/-]+ABS)?|ABS(?:[\s,\/-]+Sili\w*)?)\b",
     re.IGNORECASE,
@@ -449,6 +462,42 @@ def parse_ocr_candidates(ocr_data: dict[str, object]) -> dict[str, dict[str, obj
             "medium",
         )
 
+    speed_match = SPEED_RE.search(text)
+    if speed_match:
+        result["numero_velocita"] = excel_field_entry(
+            "numero_velocita",
+            speed_match.group(1),
+            "ocr",
+            "medium",
+        )
+
+    suction_match = SUCTION_RE.search(text)
+    if suction_match:
+        result["numero_modalita_suzione"] = excel_field_entry(
+            "numero_modalita_suzione",
+            suction_match.group(1),
+            "ocr",
+            "medium",
+        )
+
+    tapping_match = TAPPING_RE.search(text)
+    if tapping_match:
+        result["numero_modalita_tapping"] = excel_field_entry(
+            "numero_modalita_tapping",
+            tapping_match.group(1),
+            "ocr",
+            "medium",
+        )
+
+    rotation_match = ROTATION_RE.search(text)
+    if rotation_match:
+        result["numero_modalita_rotazione"] = excel_field_entry(
+            "numero_modalita_rotazione",
+            rotation_match.group(1),
+            "ocr",
+            "medium",
+        )
+
     if re.search(r"Scansiona il QR code|QR code", text, re.IGNORECASE):
         result["qr_code_junker"] = excel_field_entry(
             "qr_code_junker",
@@ -468,6 +517,14 @@ def parse_ocr_candidates(ocr_data: dict[str, object]) -> dict[str, dict[str, obj
     if re.search(r"\bCE\b", text):
         result["simbolo_ce"] = excel_field_entry(
             "simbolo_ce",
+            "✅",
+            "ocr",
+            "low",
+        )
+
+    if re.search(r"Riscaldante|Warming|Heating", text, re.IGNORECASE):
+        result["funzione_riscaldante"] = excel_field_entry(
+            "funzione_riscaldante",
             "✅",
             "ocr",
             "low",
