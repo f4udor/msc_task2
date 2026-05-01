@@ -524,6 +524,111 @@ def count_missing_fields(fields: dict[str, dict[str, object]]) -> int:
     )
 
 
+def is_filled_value(value: object) -> bool:
+    return value not in (None, "")
+
+
+def build_coverage_report(records: list[dict[str, object]]) -> dict[str, object]:
+    total = len(records)
+    sorted_by_missing = sorted(
+        records,
+        key=lambda record: (record["missing_fields_count"], record["file"]),
+    )
+
+    fields_report: list[dict[str, object]] = []
+    for column, field_name, label in EXCEL_FIELDS:
+        source_counts = {
+            "static": 0,
+            "filename": 0,
+            "pdf_text": 0,
+            "ocr": 0,
+            "missing": 0,
+        }
+        filled = 0
+        examples: list[dict[str, object]] = []
+
+        for record in records:
+            field = record["fields"][field_name]
+            source = field["source"]
+            source_counts[source] = source_counts.get(source, 0) + 1
+
+            if is_filled_value(field["value"]):
+                filled += 1
+                if len(examples) < 3:
+                    examples.append(
+                        {
+                            "file": record["file"],
+                            "value": field["value"],
+                            "source": source,
+                        }
+                    )
+
+        fields_report.append(
+            {
+                "column": column,
+                "field_name": field_name,
+                "label": label,
+                "filled": filled,
+                "total": total,
+                "coverage_pct": round((filled / total) * 100, 2) if total else 0.0,
+                "source_counts": source_counts,
+                "examples": examples,
+            }
+        )
+
+    return {
+        "total_pdfs": total,
+        "average_missing_fields": round(
+            sum(record["missing_fields_count"] for record in records) / total,
+            2,
+        ) if total else 0.0,
+        "best_pdfs": [
+            {
+                "file": record["file"],
+                "missing_fields_count": record["missing_fields_count"],
+            }
+            for record in sorted_by_missing[:10]
+        ],
+        "worst_pdfs": [
+            {
+                "file": record["file"],
+                "missing_fields_count": record["missing_fields_count"],
+            }
+            for record in sorted_by_missing[-10:]
+        ],
+        "fields": fields_report,
+    }
+
+
+def print_coverage_report(report: dict[str, object]) -> None:
+    print("=" * 80)
+    print("COVERAGE REPORT")
+    print(f"PDF analizzati: {report['total_pdfs']}")
+    print(f"Media campi mancanti: {report['average_missing_fields']}")
+
+    print("\nMIGLIORI 10 PDF:")
+    for item in report["best_pdfs"]:
+        print(f"- {item['missing_fields_count']} missing: {item['file']}")
+
+    print("\nPEGGIORI 10 PDF:")
+    for item in report["worst_pdfs"]:
+        print(f"- {item['missing_fields_count']} missing: {item['file']}")
+
+    print("\nCOPERTURA PER CAMPO:")
+    for field in sorted(report["fields"], key=lambda item: (item["filled"], item["column"])):
+        sources = field["source_counts"]
+        print(
+            f"- {field['column']} {field['field_name']}: "
+            f"{field['filled']}/{field['total']} "
+            f"({field['coverage_pct']}%) "
+            f"[static={sources['static']} "
+            f"filename={sources['filename']} "
+            f"pdf={sources['pdf_text']} "
+            f"ocr={sources['ocr']} "
+            f"missing={sources['missing']}]"
+        )
+
+
 def write_sheet_csv(records: list[dict[str, object]], output_path: Path) -> None:
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with output_path.open("w", encoding="utf-8", newline="") as handle:
@@ -630,6 +735,16 @@ def main() -> int:
         default=200,
         help="Risoluzione di rendering per OCR e dump immagini. Default: 200",
     )
+    parser.add_argument(
+        "--coverage-report",
+        action="store_true",
+        help="Stampa un riepilogo di copertura dei campi su tutti i PDF analizzati.",
+    )
+    parser.add_argument(
+        "--coverage-json",
+        type=Path,
+        help="Salva il coverage report in formato JSON.",
+    )
     args = parser.parse_args()
 
     pdf_dir = args.directory.resolve()
@@ -711,6 +826,16 @@ def main() -> int:
 
     if args.export_csv:
         write_sheet_csv(records, args.export_csv.resolve())
+
+    if args.coverage_report or args.coverage_json:
+        coverage_report = build_coverage_report(records)
+        if args.coverage_report and not args.json:
+            print_coverage_report(coverage_report)
+        if args.coverage_json:
+            args.coverage_json.resolve().write_text(
+                json.dumps(coverage_report, indent=2, ensure_ascii=False),
+                encoding="utf-8",
+            )
 
     if args.json:
         print(json.dumps(records, indent=2, ensure_ascii=False))
