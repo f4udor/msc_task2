@@ -67,6 +67,23 @@ EXCEL_FIELDS = [
 ]
 
 EXCEL_FIELD_NAMES = [field_name for _, field_name, _ in EXCEL_FIELDS]
+PRESENCE_ONLY_FIELDS = {
+    "simbolo_ce",
+    "simbolo_raee",
+    "simbolo_ukca",
+    "simbolo_triman",
+    "simbolo_smaltimento_spagnolo",
+    "qr_code_junker",
+    "simbolo_garanzia_2_anni",
+    "simbolo_libretto_informativo",
+    "strap_on_compatibile",
+    "funzione_riscaldante",
+    "sexy_ideas",
+}
+FIELD_MODES = {
+    field_name: ("presence_only" if field_name in PRESENCE_ONLY_FIELDS else "value")
+    for field_name in EXCEL_FIELD_NAMES
+}
 
 FILENAME_RE = re.compile(
     r"^(?P<ean>\d{13})_"
@@ -132,6 +149,28 @@ FALSE_DEFAULT_FIELDS = {
     "codice_smaltimento_doypack",
     "sexy_ideas",
 }
+ANCHOR_PATTERNS = {
+    "has_sexy_ideas": [r"SEXY IDEAS"],
+    "has_qr_phrase": [r"TU CI PIACI", r"QR code", r"Scansiona il QR code"],
+    "has_material": [r"Silicone", r"\bABS\b", r"\bTPE\b", r"\bPVC\b"],
+    "has_ipx": [r"\b[I1]PX?\d+\b", r"Waterproof", r"Impermeabile"],
+    "has_vibration": [r"vibraz", r"vibrations"],
+    "has_speed": [r"speed", r"velocit"],
+    "has_suction": [r"suction", r"suzione"],
+    "has_tapping": [r"tapping", r"modalit[aà]\s*tapp"],
+    "has_rotation": [r"rotation", r"modalit[aà]\s*rot"],
+    "has_charge": [r"Ricarica", r"charge", r"USB-C", r"minijack", r"AAA Batteries"],
+    "has_battery": [r"mAh", r"Tensione nominale", r"battery"],
+    "has_lot": [r"\bLOT\b"],
+    "has_pap": [r"\bPAP\b"],
+    "has_cpe": [r"\bCPE\b"],
+    "has_company_footer": [r"Prodotto e importato", r"MySecretCase", r"info@mysecretcase"],
+    "has_environmental_label": [r"ETICHETTA AMBIENTALE"],
+    "has_ce": [r"\bCE\b", r"C€", r"Ce RE"],
+    "has_garanzia": [r"Garanzia 2 anni", r"2 ?years warranty"],
+    "has_warming": [r"Riscaldante", r"Warming", r"Heating"],
+    "has_strap_on": [r"\bStrap-?on\b"],
+}
 
 
 def value_entry(value: object, source: str, confidence: str = "high") -> dict[str, object]:
@@ -154,6 +193,7 @@ def excel_field_entry(
     entry = value_entry(value, source, confidence)
     entry["column"] = column
     entry["label"] = label
+    entry["mode"] = FIELD_MODES[field_name]
     return entry
 
 
@@ -395,161 +435,214 @@ def parse_disposal_codes(words: list[dict[str, object]]) -> dict[str, dict[str, 
     return result
 
 
-def parse_ocr_candidates(ocr_data: dict[str, object]) -> dict[str, dict[str, object]]:
-    if not ocr_data.get("enabled"):
-        return {}
+def find_anchors(ocr_text: str) -> dict[str, bool]:
+    anchors: dict[str, bool] = {}
+    for anchor_name, patterns in ANCHOR_PATTERNS.items():
+        anchors[anchor_name] = any(
+            re.search(pattern, ocr_text, re.IGNORECASE)
+            for pattern in patterns
+        )
+    return anchors
 
-    text = str(ocr_data.get("text", ""))
-    normalized_text = text.replace("\n", " ")
+
+def infer_layout_zones(anchors: dict[str, bool]) -> dict[str, bool]:
+    return {
+        "marketing_panel": anchors.get("has_sexy_ideas", False),
+        "technical_specs_panel": any(
+            anchors.get(name, False)
+            for name in (
+                "has_material",
+                "has_ipx",
+                "has_vibration",
+                "has_speed",
+                "has_suction",
+                "has_tapping",
+                "has_rotation",
+                "has_charge",
+                "has_battery",
+                "has_garanzia",
+                "has_warming",
+                "has_strap_on",
+            )
+        ),
+        "qr_panel": anchors.get("has_qr_phrase", False),
+        "compliance_panel": any(
+            anchors.get(name, False)
+            for name in (
+                "has_lot",
+                "has_pap",
+                "has_cpe",
+                "has_company_footer",
+                "has_environmental_label",
+                "has_ce",
+            )
+        ),
+        "front_product_panel": anchors.get("has_company_footer", False),
+    }
+
+
+def parse_technical_specs_candidates(
+    text: str,
+    normalized_text: str,
+    anchors: dict[str, bool],
+) -> dict[str, dict[str, object]]:
     result: dict[str, dict[str, object]] = {}
 
-    lot_match = LOT_RE.search(text)
-    if lot_match:
-        lot_value = lot_match.group(1).strip()
-        result["numero_serie_lotto"] = excel_field_entry(
-            "numero_serie_lotto",
-            f"LOT: {lot_value}",
-            "ocr",
-            "medium",
-        )
-        result["lotto"] = excel_field_entry(
-            "lotto",
-            lot_value,
-            "ocr",
-            "medium",
-        )
+    if anchors.get("has_battery"):
+        battery_match = BATTERY_RE.search(text)
+        voltage_match = VOLTAGE_RE.search(text)
+        if battery_match:
+            battery_value = battery_match.group(1).replace(",", ".")
+            battery_text = f"{battery_value}mAh"
+            if voltage_match:
+                voltage_value = voltage_match.group(1).replace(",", ".")
+                battery_text = f"{battery_text} / {voltage_value}V"
+            result["capacita_batteria_tensione"] = excel_field_entry(
+                "capacita_batteria_tensione",
+                battery_text,
+                "ocr",
+                "medium",
+            )
 
-    battery_match = BATTERY_RE.search(text)
-    voltage_match = VOLTAGE_RE.search(text)
-    if battery_match:
-        battery_value = battery_match.group(1).replace(",", ".")
-        battery_text = f"{battery_value}mAh"
-        if voltage_match:
-            voltage_value = voltage_match.group(1).replace(",", ".")
-            battery_text = f"{battery_text} / {voltage_value}V"
-        result["capacita_batteria_tensione"] = excel_field_entry(
-            "capacita_batteria_tensione",
-            battery_text,
-            "ocr",
-            "medium",
-        )
+    if anchors.get("has_ipx"):
+        ip_match = IP_RE.search(text)
+        if ip_match:
+            result["impermeabilita"] = excel_field_entry(
+                "impermeabilita",
+                ip_match.group(0).upper().replace("1P", "IP"),
+                "ocr",
+                "medium",
+            )
+        elif re.search(r"Non impermeabile|Not waterproof", text, re.IGNORECASE):
+            result["impermeabilita"] = excel_field_entry(
+                "impermeabilita",
+                "❌",
+                "inference",
+                "medium",
+            )
 
-    ip_match = IP_RE.search(text)
-    if ip_match:
-        result["impermeabilita"] = excel_field_entry(
-            "impermeabilita",
-            ip_match.group(0).upper().replace("1P", "IP"),
-            "ocr",
-            "medium",
-        )
+    if anchors.get("has_material"):
+        material_match = MATERIAL_RE.search(normalized_text)
+        if material_match:
+            material_value = material_match.group(1)
+            material_value = re.sub(r"sili\w*", "Silicone", material_value, flags=re.IGNORECASE)
+            material_value = re.sub(r"\s+", "", material_value)
+            material_value = material_value.replace(",", "/").replace("-", "/")
+            result["materiale"] = excel_field_entry(
+                "materiale",
+                material_value,
+                "ocr",
+                "medium",
+            )
+        else:
+            for pattern, material_value in EXTRA_MATERIAL_PATTERNS:
+                if pattern.search(text):
+                    result["materiale"] = excel_field_entry(
+                        "materiale",
+                        material_value,
+                        "inference",
+                        "medium",
+                    )
+                    break
 
-    dimensions_match = DIMENSIONS_RE.search(normalized_text)
-    if dimensions_match:
-        first = dimensions_match.group(1).replace(",", ".")
-        second = dimensions_match.group(2).replace(",", ".")
-        second_value = float(second)
-        first_value = float(first)
-        if second_value > first_value and second.startswith("9") and len(second) > 2:
-            second = second[1:]
-        result["dimensioni"] = excel_field_entry(
-            "dimensioni",
-            f"{first}cm x Ø{second}cm",
-            "ocr",
-            "medium",
-        )
+    if any(anchors.get(name, False) for name in ("has_material", "has_charge", "has_vibration")):
+        dimensions_match = DIMENSIONS_RE.search(normalized_text)
+        if dimensions_match:
+            first = dimensions_match.group(1).replace(",", ".")
+            second = dimensions_match.group(2).replace(",", ".")
+            second_value = float(second)
+            first_value = float(first)
+            if second_value > first_value and second.startswith("9") and len(second) > 2:
+                second = second[1:]
+            result["dimensioni"] = excel_field_entry(
+                "dimensioni",
+                f"{first}cm x Ø{second}cm",
+                "ocr",
+                "medium",
+            )
 
-    material_match = MATERIAL_RE.search(normalized_text)
-    if material_match:
-        material_value = material_match.group(1)
-        material_value = re.sub(r"sili\w*", "Silicone", material_value, flags=re.IGNORECASE)
-        material_value = re.sub(r"\s+", "", material_value)
-        material_value = material_value.replace(",", "/").replace("-", "/")
-        result["materiale"] = excel_field_entry(
-            "materiale",
-            material_value,
-            "ocr",
-            "medium",
-        )
+    if anchors.get("has_charge"):
+        if re.search(r"Ricarica magnetica|Magnetic charge", text, re.IGNORECASE):
+            result["modalita_ricarica"] = excel_field_entry(
+                "modalita_ricarica",
+                "Ricarica magnetica",
+                "ocr",
+                "medium",
+            )
+        elif re.search(r"USB-C|USB C", text, re.IGNORECASE):
+            result["modalita_ricarica"] = excel_field_entry(
+                "modalita_ricarica",
+                "Ricarica USB-C",
+                "inference",
+                "medium",
+            )
+        elif re.search(r"minijack", text, re.IGNORECASE):
+            result["modalita_ricarica"] = excel_field_entry(
+                "modalita_ricarica",
+                "Ricarica minijack",
+                "inference",
+                "medium",
+            )
+        elif re.search(r"AAA Batteries|Batterie AAA", text, re.IGNORECASE):
+            result["modalita_ricarica"] = excel_field_entry(
+                "modalita_ricarica",
+                "2 Batterie AAA",
+                "inference",
+                "medium",
+            )
 
-    if re.search(r"Ricarica magnetica|Magnetic charge", text, re.IGNORECASE):
-        result["modalita_ricarica"] = excel_field_entry(
-            "modalita_ricarica",
-            "Ricarica magnetica",
-            "ocr",
-            "medium",
-        )
+    if anchors.get("has_vibration"):
+        vibrations_match = VIBRATIONS_RE.search(text)
+        if vibrations_match:
+            vibrations_value = vibrations_match.group(1) or vibrations_match.group(2)
+            result["numero_vibrazioni"] = excel_field_entry(
+                "numero_vibrazioni",
+                vibrations_value,
+                "ocr",
+                "medium",
+            )
 
-    vibrations_match = VIBRATIONS_RE.search(text)
-    if vibrations_match:
-        vibrations_value = vibrations_match.group(1) or vibrations_match.group(2)
-        result["numero_vibrazioni"] = excel_field_entry(
-            "numero_vibrazioni",
-            vibrations_value,
-            "ocr",
-            "medium",
-        )
+    if anchors.get("has_speed"):
+        speed_match = SPEED_RE.search(text)
+        if speed_match:
+            result["numero_velocita"] = excel_field_entry(
+                "numero_velocita",
+                speed_match.group(1),
+                "ocr",
+                "medium",
+            )
 
-    speed_match = SPEED_RE.search(text)
-    if speed_match:
-        result["numero_velocita"] = excel_field_entry(
-            "numero_velocita",
-            speed_match.group(1),
-            "ocr",
-            "medium",
-        )
+    if anchors.get("has_suction"):
+        suction_match = SUCTION_RE.search(text)
+        if suction_match:
+            result["numero_modalita_suzione"] = excel_field_entry(
+                "numero_modalita_suzione",
+                suction_match.group(1),
+                "ocr",
+                "medium",
+            )
 
-    suction_match = SUCTION_RE.search(text)
-    if suction_match:
-        result["numero_modalita_suzione"] = excel_field_entry(
-            "numero_modalita_suzione",
-            suction_match.group(1),
-            "ocr",
-            "medium",
-        )
+    if anchors.get("has_tapping"):
+        tapping_match = TAPPING_RE.search(text)
+        if tapping_match:
+            result["numero_modalita_tapping"] = excel_field_entry(
+                "numero_modalita_tapping",
+                tapping_match.group(1),
+                "ocr",
+                "medium",
+            )
 
-    tapping_match = TAPPING_RE.search(text)
-    if tapping_match:
-        result["numero_modalita_tapping"] = excel_field_entry(
-            "numero_modalita_tapping",
-            tapping_match.group(1),
-            "ocr",
-            "medium",
-        )
+    if anchors.get("has_rotation"):
+        rotation_match = ROTATION_RE.search(text)
+        if rotation_match:
+            result["numero_modalita_rotazione"] = excel_field_entry(
+                "numero_modalita_rotazione",
+                rotation_match.group(1),
+                "ocr",
+                "medium",
+            )
 
-    rotation_match = ROTATION_RE.search(text)
-    if rotation_match:
-        result["numero_modalita_rotazione"] = excel_field_entry(
-            "numero_modalita_rotazione",
-            rotation_match.group(1),
-            "ocr",
-            "medium",
-        )
-
-    if re.search(r"Scansiona il QR code|QR code", text, re.IGNORECASE):
-        result["qr_code_junker"] = excel_field_entry(
-            "qr_code_junker",
-            "✅",
-            "ocr",
-            "low",
-        )
-
-    if re.search(r"Garanzia 2 anni|2 ?years warranty", text, re.IGNORECASE):
-        result["simbolo_garanzia_2_anni"] = excel_field_entry(
-            "simbolo_garanzia_2_anni",
-            "✅",
-            "ocr",
-            "low",
-        )
-
-    if re.search(r"\bCE\b", text):
-        result["simbolo_ce"] = excel_field_entry(
-            "simbolo_ce",
-            "✅",
-            "ocr",
-            "low",
-        )
-
-    if re.search(r"Riscaldante|Warming|Heating", text, re.IGNORECASE):
+    if anchors.get("has_warming"):
         result["funzione_riscaldante"] = excel_field_entry(
             "funzione_riscaldante",
             "✅",
@@ -557,9 +650,17 @@ def parse_ocr_candidates(ocr_data: dict[str, object]) -> dict[str, dict[str, obj
             "low",
         )
 
-    if re.search(r"\bStrap-?on\b", text, re.IGNORECASE):
+    if anchors.get("has_strap_on"):
         result["strap_on_compatibile"] = excel_field_entry(
             "strap_on_compatibile",
+            "✅",
+            "ocr",
+            "low",
+        )
+
+    if anchors.get("has_garanzia"):
+        result["simbolo_garanzia_2_anni"] = excel_field_entry(
+            "simbolo_garanzia_2_anni",
             "✅",
             "ocr",
             "low",
@@ -568,9 +669,102 @@ def parse_ocr_candidates(ocr_data: dict[str, object]) -> dict[str, dict[str, obj
     return result
 
 
+def parse_marketing_candidates(
+    text: str,
+    anchors: dict[str, bool],
+) -> dict[str, dict[str, object]]:
+    result: dict[str, dict[str, object]] = {}
+    if anchors.get("has_sexy_ideas") and re.search(r"SEXY IDEAS", text, re.IGNORECASE):
+        result["sexy_ideas"] = excel_field_entry(
+            "sexy_ideas",
+            "✅",
+            "ocr",
+            "medium",
+        )
+    return result
+
+
+def parse_qr_candidates(
+    text: str,
+    anchors: dict[str, bool],
+) -> dict[str, dict[str, object]]:
+    result: dict[str, dict[str, object]] = {}
+    if anchors.get("has_qr_phrase") and re.search(r"Scansiona il QR code|QR code", text, re.IGNORECASE):
+        result["qr_code_junker"] = excel_field_entry(
+            "qr_code_junker",
+            "✅",
+            "ocr",
+            "low",
+        )
+    return result
+
+
+def parse_compliance_candidates(
+    text: str,
+    anchors: dict[str, bool],
+) -> dict[str, dict[str, object]]:
+    result: dict[str, dict[str, object]] = {}
+
+    if anchors.get("has_lot"):
+        lot_match = LOT_RE.search(text)
+        if lot_match:
+            lot_value = lot_match.group(1).strip()
+            result["numero_serie_lotto"] = excel_field_entry(
+                "numero_serie_lotto",
+                f"LOT: {lot_value}",
+                "ocr",
+                "medium",
+            )
+            result["lotto"] = excel_field_entry(
+                "lotto",
+                lot_value,
+                "ocr",
+                "medium",
+            )
+
+    if anchors.get("has_ce") and CE_BROAD_RE.search(text):
+        result["simbolo_ce"] = excel_field_entry(
+            "simbolo_ce",
+            "✅",
+            "inference",
+            "low",
+        )
+
+    return result
+
+
+def parse_ocr_candidates(
+    ocr_data: dict[str, object],
+    anchors: dict[str, bool],
+    zones: dict[str, bool],
+) -> dict[str, dict[str, object]]:
+    if not ocr_data.get("enabled"):
+        return {}
+
+    text = str(ocr_data.get("text", ""))
+    normalized_text = text.replace("\n", " ")
+    result: dict[str, dict[str, object]] = {}
+
+    if zones.get("technical_specs_panel"):
+        result.update(parse_technical_specs_candidates(text, normalized_text, anchors))
+
+    if zones.get("marketing_panel"):
+        result.update(parse_marketing_candidates(text, anchors))
+
+    if zones.get("qr_panel"):
+        result.update(parse_qr_candidates(text, anchors))
+
+    if zones.get("compliance_panel"):
+        result.update(parse_compliance_candidates(text, anchors))
+
+    return result
+
+
 def parse_inferred_candidates(
     fields: dict[str, dict[str, object]],
     ocr_data: dict[str, object] | None,
+    anchors: dict[str, bool],
+    zones: dict[str, bool],
 ) -> dict[str, dict[str, object]]:
     if ocr_data is None or not ocr_data.get("enabled"):
         return {}
@@ -581,6 +775,7 @@ def parse_inferred_candidates(
     if (
         fields.get("contenuto_triman_corretto", {}).get("value")
         and fields.get("simbolo_triman", {}).get("value") in (None, "")
+        and zones.get("compliance_panel")
     ):
         result["simbolo_triman"] = excel_field_entry(
             "simbolo_triman",
@@ -589,7 +784,7 @@ def parse_inferred_candidates(
             "medium",
         )
 
-    if re.search(r"SEXY IDEAS", text, re.IGNORECASE):
+    if anchors.get("has_sexy_ideas") and re.search(r"SEXY IDEAS", text, re.IGNORECASE):
         result["sexy_ideas"] = excel_field_entry(
             "sexy_ideas",
             "✅",
@@ -597,7 +792,7 @@ def parse_inferred_candidates(
             "medium",
         )
 
-    if CE_BROAD_RE.search(text):
+    if anchors.get("has_ce") and CE_BROAD_RE.search(text):
         result["simbolo_ce"] = excel_field_entry(
             "simbolo_ce",
             "✅",
@@ -605,21 +800,21 @@ def parse_inferred_candidates(
             "low",
         )
 
-    if re.search(r"USB-C|USB C", text, re.IGNORECASE):
+    if anchors.get("has_charge") and re.search(r"USB-C|USB C", text, re.IGNORECASE):
         result["modalita_ricarica"] = excel_field_entry(
             "modalita_ricarica",
             "Ricarica USB-C",
             "inference",
             "medium",
         )
-    elif re.search(r"minijack", text, re.IGNORECASE):
+    elif anchors.get("has_charge") and re.search(r"minijack", text, re.IGNORECASE):
         result["modalita_ricarica"] = excel_field_entry(
             "modalita_ricarica",
             "Ricarica minijack",
             "inference",
             "medium",
         )
-    elif re.search(r"AAA Batteries|Batterie AAA", text, re.IGNORECASE):
+    elif anchors.get("has_charge") and re.search(r"AAA Batteries|Batterie AAA", text, re.IGNORECASE):
         result["modalita_ricarica"] = excel_field_entry(
             "modalita_ricarica",
             "2 Batterie AAA",
@@ -627,7 +822,7 @@ def parse_inferred_candidates(
             "medium",
         )
 
-    if re.search(r"Non impermeabile|Not waterproof", text, re.IGNORECASE):
+    if anchors.get("has_ipx") and re.search(r"Non impermeabile|Not waterproof", text, re.IGNORECASE):
         result["impermeabilita"] = excel_field_entry(
             "impermeabilita",
             "❌",
@@ -635,7 +830,7 @@ def parse_inferred_candidates(
             "medium",
         )
 
-    if "materiale" not in result and fields.get("materiale", {}).get("value") in (None, ""):
+    if anchors.get("has_material") and "materiale" not in result and fields.get("materiale", {}).get("value") in (None, ""):
         for pattern, material_value in EXTRA_MATERIAL_PATTERNS:
             if pattern.search(text):
                 result["materiale"] = excel_field_entry(
@@ -689,9 +884,22 @@ def mark_missing_fields(fields: dict[str, dict[str, object]]) -> dict[str, dict[
 
 def build_sheet_row(fields: dict[str, dict[str, object]]) -> dict[str, object]:
     return {
-        label: fields[field_name]["value"]
+        label: normalize_field_value(fields[field_name])
         for _, field_name, label in EXCEL_FIELDS
     }
+
+
+def normalize_field_value(field: dict[str, object]) -> object:
+    mode = field.get("mode")
+    value = field.get("value")
+    if mode == "presence_only":
+        if value == "✅":
+            return "✅"
+        if value == "❌":
+            return "❌"
+        if value in (None, ""):
+            return None
+    return value
 
 
 def count_missing_fields(fields: dict[str, dict[str, object]]) -> int:
@@ -834,6 +1042,8 @@ def build_structured_record(
     words = extract_words(pdf_path)
     filename_fields = parse_filename(pdf_path)
     ocr_data = extract_ocr_data(pdf_path, dpi=ocr_dpi) if ocr_enabled else None
+    anchors = find_anchors(str(ocr_data.get("text", ""))) if ocr_data is not None else {}
+    zones = infer_layout_zones(anchors)
     image_files = (
         dump_page_images(pdf_path, dump_images_dir, dpi=ocr_dpi)
         if dump_images_dir is not None
@@ -845,8 +1055,8 @@ def build_structured_record(
     fields.update(parse_filename_candidates(filename_fields))
     fields.update(parse_disposal_codes(words))
     if ocr_data is not None:
-        fields.update(parse_ocr_candidates(ocr_data))
-        fields.update(parse_inferred_candidates(fields, ocr_data))
+        fields.update(parse_ocr_candidates(ocr_data, anchors, zones))
+        fields.update(parse_inferred_candidates(fields, ocr_data, anchors, zones))
     fields = apply_false_defaults(fields)
     fields = mark_missing_fields(fields)
 
@@ -862,6 +1072,8 @@ def build_structured_record(
         },
         "fields": fields,
         "extra_fields": filename_fields,
+        "anchors": anchors,
+        "zones": zones,
         "sheet_row": build_sheet_row(fields),
         "missing_fields_count": count_missing_fields(fields),
     }
