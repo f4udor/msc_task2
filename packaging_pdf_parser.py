@@ -1087,8 +1087,98 @@ def build_structured_record(
     return record
 
 
+def resolve_pdf_inputs(input_path: Path) -> list[Path]:
+    resolved_path = input_path.resolve()
+    if resolved_path.is_file():
+        if resolved_path.suffix.lower() != ".pdf":
+            raise ValueError(f"Il file non è un PDF: {resolved_path}")
+        return [resolved_path]
+    if resolved_path.is_dir():
+        return iter_pdfs(resolved_path)
+    raise ValueError(f"Percorso non trovato: {resolved_path}")
+
+
 def iter_pdfs(directory: Path) -> list[Path]:
     return sorted(directory.glob("*.pdf"))
+
+
+def simplify_field_entry(field: dict[str, object]) -> dict[str, object]:
+    return {
+        "column": field["column"],
+        "label": field["label"],
+        "mode": field["mode"],
+        "value": normalize_field_value(field),
+        "raw_value": field["value"],
+        "source": field["source"],
+        "confidence": field["confidence"],
+    }
+
+
+def build_automation_record(
+    record: dict[str, object],
+    *,
+    include_ocr_text: bool = False,
+) -> dict[str, object]:
+    simplified_fields = {
+        field_name: simplify_field_entry(field)
+        for field_name, field in record["fields"].items()
+    }
+    simplified_extra_fields = {
+        field_name: field["value"]
+        for field_name, field in record["extra_fields"].items()
+    }
+    automation_record = {
+        "file": record["file"],
+        "missing_fields_count": record["missing_fields_count"],
+        "analysis": record["analysis"],
+        "anchors": record["anchors"],
+        "zones": record["zones"],
+        "sheet_row": record["sheet_row"],
+        "fields": simplified_fields,
+        "extra_fields": simplified_extra_fields,
+    }
+
+    if include_ocr_text and "ocr" in record:
+        automation_record["ocr"] = {
+            "enabled": record["ocr"]["enabled"],
+            "error": record["ocr"]["error"],
+            "text": record["ocr"]["text"],
+        }
+
+    return automation_record
+
+
+def build_automation_payload(
+    input_path: Path,
+    *,
+    ocr_enabled: bool = False,
+    ocr_dpi: int = 200,
+    include_ocr_text: bool = False,
+) -> dict[str, object]:
+    pdf_paths = resolve_pdf_inputs(input_path)
+    records = [
+        build_structured_record(
+            pdf_path,
+            ocr_enabled=ocr_enabled,
+            ocr_dpi=ocr_dpi,
+        )
+        for pdf_path in pdf_paths
+    ]
+    return {
+        "meta": {
+            "input_path": str(input_path.resolve()),
+            "total_pdfs": len(records),
+            "ocr_enabled": ocr_enabled,
+            "ocr_dpi": ocr_dpi,
+        },
+        "records": [
+            build_automation_record(
+                record,
+                include_ocr_text=include_ocr_text,
+            )
+            for record in records
+        ],
+    }
 
 
 def main() -> int:
