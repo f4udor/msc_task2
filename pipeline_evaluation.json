@@ -1,0 +1,847 @@
+{
+  "dataset": {
+    "directory": "/Users/faudor/Desktop/progetti/msc_task2/images",
+    "total_pdfs": 50
+  },
+  "runs": {
+    "no_ocr": {
+      "ocr_enabled": false,
+      "ocr_dpi": 200,
+      "timing": {
+        "total_seconds": 4.947,
+        "avg_seconds_per_pdf": 0.099,
+        "median_seconds_per_pdf": 0.097,
+        "max_seconds_per_pdf": 0.141,
+        "min_seconds_per_pdf": 0.051
+      },
+      "evaluation": {
+        "total_pdfs": 50,
+        "fields_per_pdf": 34,
+        "total_cells": 1700,
+        "asserted_fill_pct": 75.47,
+        "evidence_fill_pct": 25.47,
+        "strong_evidence_fill_pct": 25.47,
+        "avg_missing_fields": 8.34,
+        "median_missing_fields": 8.0,
+        "source_counts": {
+          "static": 200,
+          "filename": 50,
+          "missing": 417,
+          "default_false": 850,
+          "pdf_text": 183
+        },
+        "field_stats": [
+          {
+            "column": "A",
+            "field_name": "nome_fabbricante",
+            "label": "Nome del fabbricante",
+            "asserted_coverage_pct": 100.0,
+            "evidence_coverage_pct": 100.0,
+            "strong_evidence_coverage_pct": 100.0,
+            "source_counts": {
+              "static": 50
+            }
+          },
+          {
+            "column": "B",
+            "field_name": "indirizzo_fabbricante",
+            "label": "Indirizzo del fabbricante",
+            "asserted_coverage_pct": 100.0,
+            "evidence_coverage_pct": 100.0,
+            "strong_evidence_coverage_pct": 100.0,
+            "source_counts": {
+              "static": 50
+            }
+          },
+          {
+            "column": "C",
+            "field_name": "nome_importatore",
+            "label": "Nome dell'importatore",
+            "asserted_coverage_pct": 100.0,
+            "evidence_coverage_pct": 100.0,
+            "strong_evidence_coverage_pct": 100.0,
+            "source_counts": {
+              "static": 50
+            }
+          },
+          {
+            "column": "D",
+            "field_name": "indirizzo_importatore",
+            "label": "Indirizzo dell'importatore",
+            "asserted_coverage_pct": 100.0,
+            "evidence_coverage_pct": 100.0,
+            "strong_evidence_coverage_pct": 100.0,
+            "source_counts": {
+              "static": 50
+            }
+          },
+          {
+            "column": "E",
+            "field_name": "tipo_o_modello",
+            "label": "Tipo o modello",
+            "asserted_coverage_pct": 100.0,
+            "evidence_coverage_pct": 100.0,
+            "strong_evidence_coverage_pct": 100.0,
+            "source_counts": {
+              "filename": 50
+            }
+          },
+          {
+            "column": "F",
+            "field_name": "numero_serie_lotto",
+            "label": "Numero di serie / lotto",
+            "asserted_coverage_pct": 0.0,
+            "evidence_coverage_pct": 0.0,
+            "strong_evidence_coverage_pct": 0.0,
+            "source_counts": {
+              "missing": 50
+            }
+          },
+          {
+            "column": "G",
+            "field_name": "lotto",
+            "label": "Lotto",
+            "asserted_coverage_pct": 0.0,
+            "evidence_coverage_pct": 0.0,
+            "strong_evidence_coverage_pct": 0.0,
+            "source_counts": {
+              "missing": 50
+            }
+          },
+          {
+            "column": "H",
+            "field_name": "simbolo_ce",
+            "label": "Simbolo CE",
+            "asserted_coverage_pct": 100.0,
+            "evidence_coverage_pct": 0.0,
+            "strong_evidence_coverage_pct": 0.0,
+            "source_counts": {
+              "default_false": 50
+            }
+          },
+          {
+            "column": "I",
+            "field_name": "simbolo_raee",
+            "label": "Simbolo RAEE",
+            "asserted_coverage_pct": 100.0,
+            "evidence_coverage_pct": 0.0,
+            "strong_evidence_coverage_pct": 0.0,
+            "source_counts": {
+              "default_false": 50
+            }
+          },
+          {
+            "column": "J",
+            "field_name": "simbolo_ukca",
+            "label": "Simbolo UKCA",
+            "asserted_coverage_pct": 100.0,
+            "evidence_coverage_pct": 0.0,
+            "strong_evidence_coverage_pct": 0.0,
+            "source_counts": {
+              "default_false": 50
+            }
+          },
+          {
+            "column": "K",
+            "field_name": "simbolo_triman",
+            "label": "Simbolo TRIMAN",
+            "asserted_coverage_pct": 100.0,
+            "evidence_coverage_pct": 0.0,
+            "strong_evidence_coverage_pct": 0.0,
+            "source_counts": {
+              "default_false": 50
+            }
+          },
+          {
+            "column": "L",
+            "field_name": "simbolo_smaltimento_spagnolo",
+            "label": "Simbolo smaltimento spagnolo",
+            "asserted_coverage_pct": 100.0,
+            "evidence_coverage_pct": 0.0,
+            "strong_evidence_coverage_pct": 0.0,
+            "source_counts": {
+              "default_false": 50
+            }
+          },
+          {
+            "column": "M",
+            "field_name": "simboli_materiali_smaltimento",
+            "label": "Simboli materiali smaltimento",
+            "asserted_coverage_pct": 92.0,
+            "evidence_coverage_pct": 92.0,
+            "strong_evidence_coverage_pct": 92.0,
+            "source_counts": {
+              "pdf_text": 46,
+              "missing": 4
+            }
+          },
+          {
+            "column": "N",
+            "field_name": "qr_code_junker",
+            "label": "QR code Junker",
+            "asserted_coverage_pct": 100.0,
+            "evidence_coverage_pct": 0.0,
+            "strong_evidence_coverage_pct": 0.0,
+            "source_counts": {
+              "default_false": 50
+            }
+          },
+          {
+            "column": "O",
+            "field_name": "simbolo_garanzia_2_anni",
+            "label": "Simbolo garanzia 2 anni",
+            "asserted_coverage_pct": 100.0,
+            "evidence_coverage_pct": 0.0,
+            "strong_evidence_coverage_pct": 0.0,
+            "source_counts": {
+              "default_false": 50
+            }
+          },
+          {
+            "column": "P",
+            "field_name": "simbolo_libretto_informativo",
+            "label": "Simbolo libretto informativo",
+            "asserted_coverage_pct": 100.0,
+            "evidence_coverage_pct": 0.0,
+            "strong_evidence_coverage_pct": 0.0,
+            "source_counts": {
+              "default_false": 50
+            }
+          },
+          {
+            "column": "Q",
+            "field_name": "capacita_batteria_tensione",
+            "label": "Capacità batteria e tensione nominale",
+            "asserted_coverage_pct": 0.0,
+            "evidence_coverage_pct": 0.0,
+            "strong_evidence_coverage_pct": 0.0,
+            "source_counts": {
+              "missing": 50
+            }
+          },
+          {
+            "column": "R",
+            "field_name": "impermeabilita",
+            "label": "Impermeabilità",
+            "asserted_coverage_pct": 0.0,
+            "evidence_coverage_pct": 0.0,
+            "strong_evidence_coverage_pct": 0.0,
+            "source_counts": {
+              "missing": 50
+            }
+          },
+          {
+            "column": "S",
+            "field_name": "materiale",
+            "label": "Materiale",
+            "asserted_coverage_pct": 0.0,
+            "evidence_coverage_pct": 0.0,
+            "strong_evidence_coverage_pct": 0.0,
+            "source_counts": {
+              "missing": 50
+            }
+          },
+          {
+            "column": "T",
+            "field_name": "modalita_ricarica",
+            "label": "Modalità di ricarica",
+            "asserted_coverage_pct": 0.0,
+            "evidence_coverage_pct": 0.0,
+            "strong_evidence_coverage_pct": 0.0,
+            "source_counts": {
+              "missing": 50
+            }
+          },
+          {
+            "column": "U",
+            "field_name": "dimensioni",
+            "label": "Dimensioni",
+            "asserted_coverage_pct": 0.0,
+            "evidence_coverage_pct": 0.0,
+            "strong_evidence_coverage_pct": 0.0,
+            "source_counts": {
+              "missing": 50
+            }
+          },
+          {
+            "column": "V",
+            "field_name": "numero_vibrazioni",
+            "label": "N. vibrazioni",
+            "asserted_coverage_pct": 100.0,
+            "evidence_coverage_pct": 0.0,
+            "strong_evidence_coverage_pct": 0.0,
+            "source_counts": {
+              "default_false": 50
+            }
+          },
+          {
+            "column": "W",
+            "field_name": "numero_velocita",
+            "label": "N. velocità",
+            "asserted_coverage_pct": 100.0,
+            "evidence_coverage_pct": 0.0,
+            "strong_evidence_coverage_pct": 0.0,
+            "source_counts": {
+              "default_false": 50
+            }
+          },
+          {
+            "column": "X",
+            "field_name": "numero_modalita_suzione",
+            "label": "N. modalità suzione",
+            "asserted_coverage_pct": 100.0,
+            "evidence_coverage_pct": 0.0,
+            "strong_evidence_coverage_pct": 0.0,
+            "source_counts": {
+              "default_false": 50
+            }
+          },
+          {
+            "column": "Y",
+            "field_name": "numero_modalita_tapping",
+            "label": "N. modalità tapping",
+            "asserted_coverage_pct": 100.0,
+            "evidence_coverage_pct": 0.0,
+            "strong_evidence_coverage_pct": 0.0,
+            "source_counts": {
+              "default_false": 50
+            }
+          },
+          {
+            "column": "Z",
+            "field_name": "numero_modalita_rotazione",
+            "label": "N. modalità rotazione",
+            "asserted_coverage_pct": 100.0,
+            "evidence_coverage_pct": 0.0,
+            "strong_evidence_coverage_pct": 0.0,
+            "source_counts": {
+              "default_false": 50
+            }
+          },
+          {
+            "column": "AA",
+            "field_name": "strap_on_compatibile",
+            "label": "Strap-on compatibile",
+            "asserted_coverage_pct": 100.0,
+            "evidence_coverage_pct": 0.0,
+            "strong_evidence_coverage_pct": 0.0,
+            "source_counts": {
+              "default_false": 50
+            }
+          },
+          {
+            "column": "AB",
+            "field_name": "funzione_riscaldante",
+            "label": "Funzione riscaldante",
+            "asserted_coverage_pct": 100.0,
+            "evidence_coverage_pct": 0.0,
+            "strong_evidence_coverage_pct": 0.0,
+            "source_counts": {
+              "default_false": 50
+            }
+          },
+          {
+            "column": "AC",
+            "field_name": "codice_asin",
+            "label": "Codice ASIN",
+            "asserted_coverage_pct": 0.0,
+            "evidence_coverage_pct": 0.0,
+            "strong_evidence_coverage_pct": 0.0,
+            "source_counts": {
+              "missing": 50
+            }
+          },
+          {
+            "column": "AD",
+            "field_name": "codice_smaltimento_scatola",
+            "label": "Codice smaltimento scatola",
+            "asserted_coverage_pct": 92.0,
+            "evidence_coverage_pct": 92.0,
+            "strong_evidence_coverage_pct": 92.0,
+            "source_counts": {
+              "pdf_text": 46,
+              "missing": 4
+            }
+          },
+          {
+            "column": "AE",
+            "field_name": "codice_smaltimento_sacchetto",
+            "label": "Codice smaltimento sacchetto",
+            "asserted_coverage_pct": 90.0,
+            "evidence_coverage_pct": 90.0,
+            "strong_evidence_coverage_pct": 90.0,
+            "source_counts": {
+              "pdf_text": 45,
+              "missing": 5
+            }
+          },
+          {
+            "column": "AF",
+            "field_name": "codice_smaltimento_doypack",
+            "label": "Codice smaltimento doypack",
+            "asserted_coverage_pct": 100.0,
+            "evidence_coverage_pct": 0.0,
+            "strong_evidence_coverage_pct": 0.0,
+            "source_counts": {
+              "default_false": 50
+            }
+          },
+          {
+            "column": "AG",
+            "field_name": "contenuto_triman_corretto",
+            "label": "Contenuto TRIMAN corretto",
+            "asserted_coverage_pct": 92.0,
+            "evidence_coverage_pct": 92.0,
+            "strong_evidence_coverage_pct": 92.0,
+            "source_counts": {
+              "pdf_text": 46,
+              "missing": 4
+            }
+          },
+          {
+            "column": "AH",
+            "field_name": "sexy_ideas",
+            "label": "Sexy Ideas",
+            "asserted_coverage_pct": 100.0,
+            "evidence_coverage_pct": 0.0,
+            "strong_evidence_coverage_pct": 0.0,
+            "source_counts": {
+              "default_false": 50
+            }
+          }
+        ]
+      }
+    },
+    "with_ocr": {
+      "ocr_enabled": true,
+      "ocr_dpi": 200,
+      "timing": {
+        "total_seconds": 74.348,
+        "avg_seconds_per_pdf": 1.487,
+        "median_seconds_per_pdf": 1.316,
+        "max_seconds_per_pdf": 4.805,
+        "min_seconds_per_pdf": 0.665
+      },
+      "evaluation": {
+        "total_pdfs": 50,
+        "fields_per_pdf": 34,
+        "total_cells": 1700,
+        "asserted_fill_pct": 82.88,
+        "evidence_fill_pct": 43.76,
+        "strong_evidence_fill_pct": 40.0,
+        "avg_missing_fields": 5.82,
+        "median_missing_fields": 6.0,
+        "source_counts": {
+          "static": 200,
+          "filename": 50,
+          "missing": 291,
+          "ocr": 247,
+          "inference": 64,
+          "default_false": 665,
+          "pdf_text": 183
+        },
+        "field_stats": [
+          {
+            "column": "A",
+            "field_name": "nome_fabbricante",
+            "label": "Nome del fabbricante",
+            "asserted_coverage_pct": 100.0,
+            "evidence_coverage_pct": 100.0,
+            "strong_evidence_coverage_pct": 100.0,
+            "source_counts": {
+              "static": 50
+            }
+          },
+          {
+            "column": "B",
+            "field_name": "indirizzo_fabbricante",
+            "label": "Indirizzo del fabbricante",
+            "asserted_coverage_pct": 100.0,
+            "evidence_coverage_pct": 100.0,
+            "strong_evidence_coverage_pct": 100.0,
+            "source_counts": {
+              "static": 50
+            }
+          },
+          {
+            "column": "C",
+            "field_name": "nome_importatore",
+            "label": "Nome dell'importatore",
+            "asserted_coverage_pct": 100.0,
+            "evidence_coverage_pct": 100.0,
+            "strong_evidence_coverage_pct": 100.0,
+            "source_counts": {
+              "static": 50
+            }
+          },
+          {
+            "column": "D",
+            "field_name": "indirizzo_importatore",
+            "label": "Indirizzo dell'importatore",
+            "asserted_coverage_pct": 100.0,
+            "evidence_coverage_pct": 100.0,
+            "strong_evidence_coverage_pct": 100.0,
+            "source_counts": {
+              "static": 50
+            }
+          },
+          {
+            "column": "E",
+            "field_name": "tipo_o_modello",
+            "label": "Tipo o modello",
+            "asserted_coverage_pct": 100.0,
+            "evidence_coverage_pct": 100.0,
+            "strong_evidence_coverage_pct": 100.0,
+            "source_counts": {
+              "filename": 50
+            }
+          },
+          {
+            "column": "F",
+            "field_name": "numero_serie_lotto",
+            "label": "Numero di serie / lotto",
+            "asserted_coverage_pct": 22.0,
+            "evidence_coverage_pct": 22.0,
+            "strong_evidence_coverage_pct": 22.0,
+            "source_counts": {
+              "missing": 39,
+              "ocr": 11
+            }
+          },
+          {
+            "column": "G",
+            "field_name": "lotto",
+            "label": "Lotto",
+            "asserted_coverage_pct": 22.0,
+            "evidence_coverage_pct": 22.0,
+            "strong_evidence_coverage_pct": 22.0,
+            "source_counts": {
+              "missing": 39,
+              "ocr": 11
+            }
+          },
+          {
+            "column": "H",
+            "field_name": "simbolo_ce",
+            "label": "Simbolo CE",
+            "asserted_coverage_pct": 100.0,
+            "evidence_coverage_pct": 40.0,
+            "strong_evidence_coverage_pct": 0.0,
+            "source_counts": {
+              "inference": 20,
+              "default_false": 30
+            }
+          },
+          {
+            "column": "I",
+            "field_name": "simbolo_raee",
+            "label": "Simbolo RAEE",
+            "asserted_coverage_pct": 100.0,
+            "evidence_coverage_pct": 0.0,
+            "strong_evidence_coverage_pct": 0.0,
+            "source_counts": {
+              "default_false": 50
+            }
+          },
+          {
+            "column": "J",
+            "field_name": "simbolo_ukca",
+            "label": "Simbolo UKCA",
+            "asserted_coverage_pct": 100.0,
+            "evidence_coverage_pct": 0.0,
+            "strong_evidence_coverage_pct": 0.0,
+            "source_counts": {
+              "default_false": 50
+            }
+          },
+          {
+            "column": "K",
+            "field_name": "simbolo_triman",
+            "label": "Simbolo TRIMAN",
+            "asserted_coverage_pct": 100.0,
+            "evidence_coverage_pct": 56.0,
+            "strong_evidence_coverage_pct": 0.0,
+            "source_counts": {
+              "inference": 28,
+              "default_false": 22
+            }
+          },
+          {
+            "column": "L",
+            "field_name": "simbolo_smaltimento_spagnolo",
+            "label": "Simbolo smaltimento spagnolo",
+            "asserted_coverage_pct": 100.0,
+            "evidence_coverage_pct": 0.0,
+            "strong_evidence_coverage_pct": 0.0,
+            "source_counts": {
+              "default_false": 50
+            }
+          },
+          {
+            "column": "M",
+            "field_name": "simboli_materiali_smaltimento",
+            "label": "Simboli materiali smaltimento",
+            "asserted_coverage_pct": 92.0,
+            "evidence_coverage_pct": 92.0,
+            "strong_evidence_coverage_pct": 92.0,
+            "source_counts": {
+              "pdf_text": 46,
+              "missing": 4
+            }
+          },
+          {
+            "column": "N",
+            "field_name": "qr_code_junker",
+            "label": "QR code Junker",
+            "asserted_coverage_pct": 100.0,
+            "evidence_coverage_pct": 76.0,
+            "strong_evidence_coverage_pct": 76.0,
+            "source_counts": {
+              "ocr": 38,
+              "default_false": 12
+            }
+          },
+          {
+            "column": "O",
+            "field_name": "simbolo_garanzia_2_anni",
+            "label": "Simbolo garanzia 2 anni",
+            "asserted_coverage_pct": 100.0,
+            "evidence_coverage_pct": 70.0,
+            "strong_evidence_coverage_pct": 70.0,
+            "source_counts": {
+              "ocr": 35,
+              "default_false": 15
+            }
+          },
+          {
+            "column": "P",
+            "field_name": "simbolo_libretto_informativo",
+            "label": "Simbolo libretto informativo",
+            "asserted_coverage_pct": 100.0,
+            "evidence_coverage_pct": 0.0,
+            "strong_evidence_coverage_pct": 0.0,
+            "source_counts": {
+              "default_false": 50
+            }
+          },
+          {
+            "column": "Q",
+            "field_name": "capacita_batteria_tensione",
+            "label": "Capacità batteria e tensione nominale",
+            "asserted_coverage_pct": 36.0,
+            "evidence_coverage_pct": 36.0,
+            "strong_evidence_coverage_pct": 36.0,
+            "source_counts": {
+              "missing": 32,
+              "ocr": 18
+            }
+          },
+          {
+            "column": "R",
+            "field_name": "impermeabilita",
+            "label": "Impermeabilità",
+            "asserted_coverage_pct": 28.0,
+            "evidence_coverage_pct": 28.0,
+            "strong_evidence_coverage_pct": 22.0,
+            "source_counts": {
+              "missing": 36,
+              "ocr": 11,
+              "inference": 3
+            }
+          },
+          {
+            "column": "S",
+            "field_name": "materiale",
+            "label": "Materiale",
+            "asserted_coverage_pct": 64.0,
+            "evidence_coverage_pct": 64.0,
+            "strong_evidence_coverage_pct": 58.0,
+            "source_counts": {
+              "ocr": 29,
+              "missing": 18,
+              "inference": 3
+            }
+          },
+          {
+            "column": "T",
+            "field_name": "modalita_ricarica",
+            "label": "Modalità di ricarica",
+            "asserted_coverage_pct": 46.0,
+            "evidence_coverage_pct": 46.0,
+            "strong_evidence_coverage_pct": 26.0,
+            "source_counts": {
+              "ocr": 13,
+              "missing": 27,
+              "inference": 10
+            }
+          },
+          {
+            "column": "U",
+            "field_name": "dimensioni",
+            "label": "Dimensioni",
+            "asserted_coverage_pct": 34.0,
+            "evidence_coverage_pct": 34.0,
+            "strong_evidence_coverage_pct": 34.0,
+            "source_counts": {
+              "ocr": 17,
+              "missing": 33
+            }
+          },
+          {
+            "column": "V",
+            "field_name": "numero_vibrazioni",
+            "label": "N. vibrazioni",
+            "asserted_coverage_pct": 100.0,
+            "evidence_coverage_pct": 46.0,
+            "strong_evidence_coverage_pct": 46.0,
+            "source_counts": {
+              "default_false": 27,
+              "ocr": 23
+            }
+          },
+          {
+            "column": "W",
+            "field_name": "numero_velocita",
+            "label": "N. velocità",
+            "asserted_coverage_pct": 100.0,
+            "evidence_coverage_pct": 4.0,
+            "strong_evidence_coverage_pct": 4.0,
+            "source_counts": {
+              "default_false": 48,
+              "ocr": 2
+            }
+          },
+          {
+            "column": "X",
+            "field_name": "numero_modalita_suzione",
+            "label": "N. modalità suzione",
+            "asserted_coverage_pct": 100.0,
+            "evidence_coverage_pct": 2.0,
+            "strong_evidence_coverage_pct": 2.0,
+            "source_counts": {
+              "default_false": 49,
+              "ocr": 1
+            }
+          },
+          {
+            "column": "Y",
+            "field_name": "numero_modalita_tapping",
+            "label": "N. modalità tapping",
+            "asserted_coverage_pct": 100.0,
+            "evidence_coverage_pct": 2.0,
+            "strong_evidence_coverage_pct": 2.0,
+            "source_counts": {
+              "default_false": 49,
+              "ocr": 1
+            }
+          },
+          {
+            "column": "Z",
+            "field_name": "numero_modalita_rotazione",
+            "label": "N. modalità rotazione",
+            "asserted_coverage_pct": 100.0,
+            "evidence_coverage_pct": 0.0,
+            "strong_evidence_coverage_pct": 0.0,
+            "source_counts": {
+              "default_false": 50
+            }
+          },
+          {
+            "column": "AA",
+            "field_name": "strap_on_compatibile",
+            "label": "Strap-on compatibile",
+            "asserted_coverage_pct": 100.0,
+            "evidence_coverage_pct": 10.0,
+            "strong_evidence_coverage_pct": 10.0,
+            "source_counts": {
+              "default_false": 45,
+              "ocr": 5
+            }
+          },
+          {
+            "column": "AB",
+            "field_name": "funzione_riscaldante",
+            "label": "Funzione riscaldante",
+            "asserted_coverage_pct": 100.0,
+            "evidence_coverage_pct": 2.0,
+            "strong_evidence_coverage_pct": 2.0,
+            "source_counts": {
+              "default_false": 49,
+              "ocr": 1
+            }
+          },
+          {
+            "column": "AC",
+            "field_name": "codice_asin",
+            "label": "Codice ASIN",
+            "asserted_coverage_pct": 0.0,
+            "evidence_coverage_pct": 0.0,
+            "strong_evidence_coverage_pct": 0.0,
+            "source_counts": {
+              "missing": 50
+            }
+          },
+          {
+            "column": "AD",
+            "field_name": "codice_smaltimento_scatola",
+            "label": "Codice smaltimento scatola",
+            "asserted_coverage_pct": 92.0,
+            "evidence_coverage_pct": 92.0,
+            "strong_evidence_coverage_pct": 92.0,
+            "source_counts": {
+              "pdf_text": 46,
+              "missing": 4
+            }
+          },
+          {
+            "column": "AE",
+            "field_name": "codice_smaltimento_sacchetto",
+            "label": "Codice smaltimento sacchetto",
+            "asserted_coverage_pct": 90.0,
+            "evidence_coverage_pct": 90.0,
+            "strong_evidence_coverage_pct": 90.0,
+            "source_counts": {
+              "pdf_text": 45,
+              "missing": 5
+            }
+          },
+          {
+            "column": "AF",
+            "field_name": "codice_smaltimento_doypack",
+            "label": "Codice smaltimento doypack",
+            "asserted_coverage_pct": 100.0,
+            "evidence_coverage_pct": 0.0,
+            "strong_evidence_coverage_pct": 0.0,
+            "source_counts": {
+              "default_false": 50
+            }
+          },
+          {
+            "column": "AG",
+            "field_name": "contenuto_triman_corretto",
+            "label": "Contenuto TRIMAN corretto",
+            "asserted_coverage_pct": 92.0,
+            "evidence_coverage_pct": 92.0,
+            "strong_evidence_coverage_pct": 92.0,
+            "source_counts": {
+              "pdf_text": 46,
+              "missing": 4
+            }
+          },
+          {
+            "column": "AH",
+            "field_name": "sexy_ideas",
+            "label": "Sexy Ideas",
+            "asserted_coverage_pct": 100.0,
+            "evidence_coverage_pct": 62.0,
+            "strong_evidence_coverage_pct": 62.0,
+            "source_counts": {
+              "ocr": 31,
+              "default_false": 19
+            }
+          }
+        ]
+      }
+    }
+  }
+}
