@@ -6,7 +6,7 @@ import statistics
 import time
 from pathlib import Path
 
-from test_vectorial_pdf import EXCEL_FIELDS, IMAGES_DIR, build_structured_record, iter_pdfs
+from packaging_pdf_parser import EXCEL_FIELDS, IMAGES_DIR, build_structured_record, iter_pdfs
 
 
 NON_EVIDENCE_SOURCES = {"default_false"}

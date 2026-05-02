@@ -6,7 +6,7 @@ from pathlib import Path
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill
 
-from test_vectorial_pdf import (
+from packaging_pdf_parser import (
     EXCEL_FIELDS,
     FIELD_MODES,
     IMAGES_DIR,

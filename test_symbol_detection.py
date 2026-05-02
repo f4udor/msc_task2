@@ -9,7 +9,7 @@ from pathlib import Path
 
 import fitz
 
-from test_vectorial_pdf import IMAGES_DIR, iter_pdfs, load_ocr_dependencies
+from packaging_pdf_parser import IMAGES_DIR, iter_pdfs, load_ocr_dependencies
 
 
 ROI_PRESETS = {

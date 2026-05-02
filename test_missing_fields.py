@@ -5,7 +5,7 @@ import json
 import re
 from pathlib import Path
 
-from test_vectorial_pdf import EXCEL_FIELDS, IMAGES_DIR, build_structured_record, iter_pdfs
+from packaging_pdf_parser import EXCEL_FIELDS, IMAGES_DIR, build_structured_record, iter_pdfs
 
 
 FIELD_LABELS = {field_name: label for _, field_name, label in EXCEL_FIELDS}
