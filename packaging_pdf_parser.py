@@ -1114,6 +1114,40 @@ def simplify_field_entry(field: dict[str, object]) -> dict[str, object]:
     }
 
 
+def build_review_summary(fields: dict[str, dict[str, object]]) -> dict[str, object]:
+    source_counts: dict[str, int] = {}
+    confidence_counts: dict[str, int] = {}
+    review_fields: list[dict[str, object]] = []
+
+    for field_name, field in fields.items():
+        source = str(field["source"])
+        confidence = str(field["confidence"])
+        source_counts[source] = source_counts.get(source, 0) + 1
+        confidence_counts[confidence] = confidence_counts.get(confidence, 0) + 1
+
+        if source in {"inference", "missing"} or confidence == "low":
+            review_fields.append(
+                {
+                    "field_name": field_name,
+                    "column": field["column"],
+                    "label": field["label"],
+                    "value": normalize_field_value(field),
+                    "raw_value": field["value"],
+                    "source": source,
+                    "confidence": confidence,
+                }
+            )
+
+    review_fields.sort(key=lambda item: item["column"])
+    return {
+        "review_needed": bool(review_fields),
+        "review_fields_count": len(review_fields),
+        "source_counts": source_counts,
+        "confidence_counts": confidence_counts,
+        "review_fields": review_fields,
+    }
+
+
 def build_automation_record(
     record: dict[str, object],
     *,
@@ -1136,6 +1170,7 @@ def build_automation_record(
         "sheet_row": record["sheet_row"],
         "fields": simplified_fields,
         "extra_fields": simplified_extra_fields,
+        "review": build_review_summary(record["fields"]),
     }
 
     if include_ocr_text and "ocr" in record:
