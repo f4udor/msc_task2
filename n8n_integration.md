@@ -4,6 +4,20 @@
 
 Usare il parser come step batch dentro n8n, senza introdurre ancora una API HTTP.
 
+Nel repository trovi anche uno scaffold importabile:
+
+```text
+n8n_packaging_workflow.json
+```
+
+E` un workflow base con:
+- `Manual Trigger`
+- `Set Config`
+- `Execute Command`
+- `Code` per espandere i record
+- `IF` per separare `parsed_ready` e `needs_review`
+- due nodi Google Sheets finali
+
 Il punto di ingresso da usare e`:
 
 ```bash
@@ -110,6 +124,8 @@ Uno di questi:
 - Manual Trigger
 - Webhook
 
+Per partire subito, importa [n8n_packaging_workflow.json](/Users/faudor/Desktop/progetti/msc_task2/n8n_packaging_workflow.json:1) e fai prima un test con `Manual Trigger`.
+
 ### 2. Recupero file
 
 Se il file arriva da Drive o upload:
@@ -160,6 +176,37 @@ Scrivi i campi provenienti da:
 
 ```text
 record.sheet_row
+```
+
+Nel workflow scaffold i due tab previsti sono:
+- `parsed_ready`
+- `needs_review`
+
+I nodi Google Sheets hanno ancora placeholder da sostituire:
+- `YOUR_SPREADSHEET_ID`
+- eventuali credenziali n8n del tuo account Google
+
+## Adattamenti Minimi Dopo Import
+
+Dopo aver importato il workflow:
+
+1. apri `Set Config`
+2. cambia:
+   - `repo_dir`
+   - `input_path`
+   - `output_json`
+3. apri i due nodi Google Sheets
+4. imposta:
+   - credenziali Google
+   - `Spreadsheet ID`
+   - tab `parsed_ready`
+   - tab `needs_review`
+5. esegui con `Manual Trigger`
+
+Se il parser girera` su una macchina diversa, il punto da cambiare quasi sicuramente e`:
+
+```text
+repo_dir
 ```
 
 ## Strategia operativa consigliata
