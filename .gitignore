@@ -1,0 +1,8 @@
+.DS_Store
+__pycache__/
+*.pyc
+pack_data.xlsx
+pack_log.xlsx
+pack_extraction_report.xlsx
+~$*.xlsx
+output_pack.csv

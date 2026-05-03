@@ -1074,6 +1074,7 @@ def build_structured_record(
         "extra_fields": filename_fields,
         "anchors": anchors,
         "zones": zones,
+        "review": build_review_summary(fields),
         "sheet_row": build_sheet_row(fields),
         "missing_fields_count": count_missing_fields(fields),
     }
