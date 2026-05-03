@@ -109,12 +109,20 @@ Per ogni PDF:
 - il batch continua comunque
 
 Segnali usati:
-- `source=missing`: campo non trovato
+- `source=missing`: campo non trovato o non leggibile in modo affidabile
 - `source=inference`: campo inferito, non evidenza diretta
 - `confidence=low`: campo debole, da ricontrollare
 - `review_needed=true`: il record richiede controllo umano
 
-Gli errori di record finiscono nel foglio `Review Queue` e nel foglio `File Log`.
+Come viene segnalato un problema:
+- nel foglio `Data` il record resta valorizzato dove possibile e porta `Review Needed = true`
+- nel foglio `Trace` ogni campo problematico ha anche `Issue Type` e `Issue Reason`
+- nel foglio `Review Queue` trovi solo i campi da ricontrollare, con motivo esplicito
+- nel foglio `File Log` trovi il riepilogo per file
+
+Importante:
+- l'assenza di rilevazione non viene piu` tradotta automaticamente in `❌`
+- per simboli grafici come lo smaltimento spagnolo, se il parser non li conferma il valore resta non risolto e viene segnalato come review, non come assenza certa
 
 ## Accuratezza sui 50 Pack
 
@@ -124,7 +132,7 @@ Risultati dell'ultimo run sul dataset attuale:
 - perfect: `0`
 - partial: `50`
 - failed: `0`
-- average missing fields: `5.82`
+- average missing fields: `19.12`
 
 Metriche di copertura gia` misurate nel progetto:
 
@@ -136,6 +144,8 @@ Interpretazione corretta:
 - il sistema produce una riga utile per tutti i 50 pack
 - nessun file e` fallito tecnicamente
 - tutti i record richiedono almeno un minimo di review, quindi oggi nessuno e` da considerare "perfetto"
+- questo e` coerente con la scelta di privilegiare onesta` e tracciabilita` rispetto a falsi negativi automatici
+- il numero di campi mancanti e` piu` alto rispetto alle versioni precedenti perche` i campi non confermati non vengono piu` trasformati automaticamente in `❌`
 
 ## Tempi di Elaborazione
 

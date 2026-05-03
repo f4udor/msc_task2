@@ -130,24 +130,24 @@ EXTRA_MATERIAL_PATTERNS = [
     (re.compile(r"\bcotone\b", re.IGNORECASE), "Cotone"),
 ]
 CE_BROAD_RE = re.compile(r"C€|\bCE\b|Ce RE|C[E€]\s+c", re.IGNORECASE)
-FALSE_DEFAULT_FIELDS = {
-    "simbolo_ce",
-    "simbolo_raee",
-    "simbolo_ukca",
-    "simbolo_triman",
-    "simbolo_smaltimento_spagnolo",
-    "qr_code_junker",
-    "simbolo_garanzia_2_anni",
-    "simbolo_libretto_informativo",
-    "numero_vibrazioni",
-    "numero_velocita",
-    "numero_modalita_suzione",
-    "numero_modalita_tapping",
-    "numero_modalita_rotazione",
-    "strap_on_compatibile",
-    "funzione_riscaldante",
-    "codice_smaltimento_doypack",
-    "sexy_ideas",
+FALSE_DEFAULT_FIELDS: set[str] = set()
+UNRESOLVED_REASON_BY_FIELD = {
+    "simbolo_ce": "Simbolo grafico non confermato automaticamente.",
+    "simbolo_raee": "Simbolo grafico non ancora riconosciuto in modo affidabile.",
+    "simbolo_ukca": "Simbolo grafico non ancora riconosciuto in modo affidabile.",
+    "simbolo_triman": "Presenza simbolo non confermata; contenuto TRIMAN separato dal simbolo.",
+    "simbolo_smaltimento_spagnolo": "Simbolo grafico visibile ma non rilevato automaticamente in modo affidabile.",
+    "simbolo_libretto_informativo": "Simbolo grafico non ancora riconosciuto in modo affidabile.",
+    "qr_code_junker": "QR o testo associato non rilevato automaticamente.",
+    "simbolo_garanzia_2_anni": "Simbolo grafico o testo di garanzia non rilevato automaticamente.",
+    "strap_on_compatibile": "Feature non confermata automaticamente.",
+    "funzione_riscaldante": "Feature non confermata automaticamente.",
+    "codice_asin": "Campo non derivabile in modo affidabile dal PDF attuale.",
+    "codice_smaltimento_doypack": "Dato non rilevato o packaging doypack assente.",
+    "numero_velocita": "Specifica tecnica non letta in modo affidabile.",
+    "numero_modalita_suzione": "Specifica tecnica non letta in modo affidabile.",
+    "numero_modalita_tapping": "Specifica tecnica non letta in modo affidabile.",
+    "numero_modalita_rotazione": "Specifica tecnica non letta in modo affidabile.",
 }
 ANCHOR_PATTERNS = {
     "has_sexy_ideas": [r"SEXY IDEAS"],
@@ -1127,6 +1127,14 @@ def build_review_summary(fields: dict[str, dict[str, object]]) -> dict[str, obje
         confidence_counts[confidence] = confidence_counts.get(confidence, 0) + 1
 
         if source in {"inference", "missing"} or confidence == "low":
+            issue_type = "missing" if source == "missing" else "low_confidence" if confidence == "low" else "inference"
+            issue_reason = UNRESOLVED_REASON_BY_FIELD.get(field_name)
+            if source == "missing" and issue_reason is None:
+                issue_reason = "Campo non trovato o illeggibile nel parsing automatico."
+            elif source == "inference" and issue_reason is None:
+                issue_reason = "Valore inferito da indizi indiretti, non confermato direttamente."
+            elif confidence == "low" and issue_reason is None:
+                issue_reason = "Valore estratto con bassa affidabilità."
             review_fields.append(
                 {
                     "field_name": field_name,
@@ -1136,6 +1144,8 @@ def build_review_summary(fields: dict[str, dict[str, object]]) -> dict[str, obje
                     "raw_value": field["value"],
                     "source": source,
                     "confidence": confidence,
+                    "issue_type": issue_type,
+                    "issue_reason": issue_reason,
                 }
             )
 

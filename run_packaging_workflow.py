@@ -18,7 +18,6 @@ SOURCE_COLORS = {
     "pdf_text": "FFF2CC",
     "ocr": "FCE5CD",
     "inference": "EAD1DC",
-    "default_false": "EFEFEF",
     "missing": "F4CCCC",
     "error": "F4CCCC",
 }
@@ -28,9 +27,6 @@ STATUS_COLORS = {
     "partial": "FFF2CC",
     "failed": "F4CCCC",
 }
-
-FAILURE_MISSING_THRESHOLD = 12
-
 
 def autofit_columns(worksheet) -> None:
     for column_cells in worksheet.columns:
@@ -56,8 +52,6 @@ def classify_record_status(record: dict[str, object]) -> str:
         return "failed"
     if record["missing_fields_count"] == 0 and not record["review"]["review_needed"]:
         return "perfect"
-    if record["missing_fields_count"] >= FAILURE_MISSING_THRESHOLD:
-        return "failed"
     return "partial"
 
 
@@ -113,7 +107,7 @@ def build_data_workbook(records: list[dict[str, object]], output_path: Path) -> 
     ws = workbook.active
     ws.title = "Data"
 
-    headers = ["File", "Status", "Review Needed", "Missing Fields"]
+    headers = ["File", "Status", "Review Needed", "Missing Fields", "Review Summary"]
     headers.extend(label for _, _, label in EXCEL_FIELDS)
     ws.append(headers)
     for cell in ws[1]:
@@ -125,6 +119,7 @@ def build_data_workbook(records: list[dict[str, object]], output_path: Path) -> 
             record["status"],
             record["review"]["review_needed"],
             record["missing_fields_count"],
+            f"{record['review']['review_fields_count']} campi da verificare" if record["review"]["review_needed"] else "nessuna review",
         ]
         row.extend(record["sheet_row"][label] for _, _, label in EXCEL_FIELDS)
         ws.append(row)
@@ -132,14 +127,14 @@ def build_data_workbook(records: list[dict[str, object]], output_path: Path) -> 
     for row_idx in range(2, ws.max_row + 1):
         status = str(ws.cell(row=row_idx, column=2).value)
         fill = PatternFill(fill_type="solid", fgColor=STATUS_COLORS.get(status, "FFFFFF"))
-        for col in range(1, 5):
+        for col in range(1, 6):
             ws.cell(row=row_idx, column=col).fill = fill
 
     ws.freeze_panes = "A2"
     autofit_columns(ws)
 
     trace = workbook.create_sheet("Trace")
-    trace_headers = ["File", "Status", "Field", "Value", "Source", "Confidence"]
+    trace_headers = ["File", "Status", "Field", "Value", "Source", "Confidence", "Issue Type", "Issue Reason"]
     trace.append(trace_headers)
     for cell in trace[1]:
         cell.font = Font(bold=True)
@@ -148,8 +143,9 @@ def build_data_workbook(records: list[dict[str, object]], output_path: Path) -> 
         for _, field_name, label in EXCEL_FIELDS:
             field = record["fields"].get(field_name)
             if field is None:
-                trace.append([record["file"], record["status"], label, None, "error", "low"])
+                trace.append([record["file"], record["status"], label, None, "error", "low", "parser_error", "Errore di parsing del record."])
                 continue
+            review_match = next((item for item in record["review"]["review_fields"] if item["field_name"] == field_name), None)
             trace.append([
                 record["file"],
                 record["status"],
@@ -157,12 +153,14 @@ def build_data_workbook(records: list[dict[str, object]], output_path: Path) -> 
                 normalize_field_value(field),
                 field["source"],
                 field["confidence"],
+                review_match["issue_type"] if review_match else None,
+                review_match["issue_reason"] if review_match else None,
             ])
 
     for row_idx in range(2, trace.max_row + 1):
         source = str(trace.cell(row=row_idx, column=5).value)
         fill = PatternFill(fill_type="solid", fgColor=SOURCE_COLORS.get(source, "FFFFFF"))
-        for col in range(3, 7):
+        for col in range(3, 9):
             trace.cell(row=row_idx, column=col).fill = fill
 
     trace.freeze_panes = "A2"
@@ -227,6 +225,7 @@ def build_log_workbook(
         "Source Summary",
         "Confidence Summary",
         "Error",
+        "Review Details",
     ]
     files_ws.append(file_headers)
     for cell in files_ws[1]:
@@ -245,26 +244,30 @@ def build_log_workbook(
             summarize_dict(record["review"]["source_counts"]),
             summarize_dict(record["review"]["confidence_counts"]),
             record.get("error"),
+            " | ".join(
+                f"{item['column']}:{item['issue_type']}"
+                for item in record["review"]["review_fields"][:10]
+            ),
         ])
 
     for row_idx in range(2, files_ws.max_row + 1):
         status = str(files_ws.cell(row=row_idx, column=2).value)
         fill = PatternFill(fill_type="solid", fgColor=STATUS_COLORS.get(status, "FFFFFF"))
-        for col in range(1, 11):
+        for col in range(1, 12):
             files_ws.cell(row=row_idx, column=col).fill = fill
 
     files_ws.freeze_panes = "A2"
     autofit_columns(files_ws)
 
     review_ws = workbook.create_sheet("Review Queue")
-    review_headers = ["File", "Status", "Field", "Value", "Source", "Confidence"]
+    review_headers = ["File", "Status", "Field", "Value", "Source", "Confidence", "Issue Type", "Issue Reason"]
     review_ws.append(review_headers)
     for cell in review_ws[1]:
         cell.font = Font(bold=True)
 
     for record in records:
         if record.get("error"):
-            review_ws.append([record["file"], "failed", "record_error", record["error"], "error", "low"])
+            review_ws.append([record["file"], "failed", "record_error", record["error"], "error", "low", "parser_error", "Errore durante il parsing del PDF."])
             continue
         for item in record["review"]["review_fields"]:
             review_ws.append([
@@ -274,12 +277,14 @@ def build_log_workbook(
                 item["value"],
                 item["source"],
                 item["confidence"],
+                item["issue_type"],
+                item["issue_reason"],
             ])
 
     for row_idx in range(2, review_ws.max_row + 1):
         source = str(review_ws.cell(row=row_idx, column=5).value)
         fill = PatternFill(fill_type="solid", fgColor=SOURCE_COLORS.get(source, "FFFFFF"))
-        for col in range(1, 7):
+        for col in range(1, 9):
             review_ws.cell(row=row_idx, column=col).fill = fill
 
     review_ws.freeze_panes = "A2"
